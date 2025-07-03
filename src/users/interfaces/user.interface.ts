@@ -1,11 +1,11 @@
-export type CreateUserType = {
+export interface ICreateUser {
   username: string;
   password: string;
   email: string;
-};
+}
 
-export type UpdateUserType = {
+export interface IUpdateUser {
   username: string;
   password: string;
   email: string;
-};
+}

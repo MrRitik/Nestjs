@@ -7,22 +7,58 @@ import {
   ParseIntPipe,
   Patch,
   Post,
+  NotFoundException,
+  InternalServerErrorException,
 } from '@nestjs/common';
-import { CreateUserDto } from '../dto/createUser.dto';
+import { plainToInstance } from 'class-transformer';
 import { UsersService } from '../services/users.service';
-import { UpdateUserDto } from '../dto/updateUser.dto';
+import { UserEntity } from '../entities/user.entity';
+import { CreateUserDto, UpdateUserDto } from '../dto';
 
 @Controller('users')
 export class UsersController {
   constructor(private usersService: UsersService) {}
+
   @Get()
-  getUsers() {
-    return this.usersService.findUsers();
+  async getUsers() {
+    try {
+      const users = await this.usersService.findUsers();
+      return plainToInstance(UserEntity, users, {
+        excludeExtraneousValues: true,
+      });
+    } catch {
+      throw new InternalServerErrorException('Failed to fetch users');
+    }
+  }
+
+  @Get(':id')
+  async getUserById(@Param('id', ParseIntPipe) id: number) {
+    try {
+      const user = await this.usersService.findUserById(id);
+      if (!user) {
+        throw new NotFoundException(`User with ID ${id} not found`);
+      }
+      return plainToInstance(UserEntity, user, {
+        excludeExtraneousValues: true,
+      });
+    } catch {
+      throw new InternalServerErrorException('Failed to fetch user');
+    }
   }
 
   @Post()
-  createUser(@Body() createuserDto: CreateUserDto) {
-    return this.usersService.createUser(createuserDto);
+  async createUser(@Body() createUserDto: CreateUserDto) {
+    try {
+      const user = await this.usersService.createUser(createUserDto);
+      return {
+        message: 'User created successfully',
+        data: plainToInstance(UserEntity, user, {
+          excludeExtraneousValues: true,
+        }),
+      };
+    } catch {
+      throw new InternalServerErrorException('Failed to create user');
+    }
   }
 
   @Patch(':id')
@@ -30,17 +66,33 @@ export class UsersController {
     @Param('id', ParseIntPipe) id: number,
     @Body() updateUserDto: UpdateUserDto,
   ) {
-    await this.usersService.updateUser(id, updateUserDto);
-    return {
-      message: 'User updated successfully',
-    };
+    try {
+      const result = await this.usersService.updateUser(id, updateUserDto);
+      if (result.affected === 0) {
+        throw new NotFoundException(`User with ID ${id} not found`);
+      }
+      return {
+        message: 'User updated successfully',
+      };
+    } catch (error) {
+      if (error instanceof NotFoundException) throw error;
+      throw new InternalServerErrorException('Failed to update user');
+    }
   }
 
   @Delete(':id')
   async deleteUser(@Param('id', ParseIntPipe) id: number) {
-    await this.usersService.deleteUser(id);
-    return {
-      message: 'User deleted successfully',
-    };
+    try {
+      const result = await this.usersService.deleteUser(id);
+      if (result.affected === 0) {
+        throw new NotFoundException(`User with ID ${id} not found`);
+      }
+      return {
+        message: 'User deleted successfully',
+      };
+    } catch (error) {
+      if (error instanceof NotFoundException) throw error;
+      throw new InternalServerErrorException('Failed to delete user');
+    }
   }
 }

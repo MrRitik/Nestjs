@@ -1,20 +1,25 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { User } from '../entities/user.entity';
+import { UserEntity } from '../entities/user.entity';
 import { Repository } from 'typeorm';
-import { CreateUserType, UpdateUserType } from 'src/utils/types';
+import { ICreateUser, IUpdateUser } from '../interfaces/user.interface';
 
 @Injectable()
 export class UsersService {
   constructor(
-    @InjectRepository(User) private userRepository: Repository<User>,
+    @InjectRepository(UserEntity)
+    private userRepository: Repository<UserEntity>,
   ) {}
 
   findUsers() {
     return this.userRepository.find();
   }
 
-  createUser(userDetail: CreateUserType) {
+  findUserById(id: number) {
+    return this.userRepository.findOne({ where: { id } });
+  }
+
+  createUser(userDetail: ICreateUser) {
     const newUser = this.userRepository.create({
       ...userDetail,
       createdAt: new Date(),
@@ -22,7 +27,7 @@ export class UsersService {
     return this.userRepository.save(newUser);
   }
 
-  updateUser(id: number, updateUserDto: UpdateUserType) {
+  updateUser(id: number, updateUserDto: IUpdateUser) {
     return this.userRepository.update({ id }, { ...updateUserDto });
   }
 

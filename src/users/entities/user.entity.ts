@@ -1,19 +1,22 @@
 import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
 
 @Entity('users')
-export class User {
-  @PrimaryGeneratedColumn()
+export class UserEntity {
+  @PrimaryGeneratedColumn({ name: 'id' })
   id: number;
 
-  @Column({ unique: true })
+  @Column({ unique: true, name: 'user_name' })
   username: string;
 
-  @Column('varchar', { length: 200 })
+  @Column('varchar', { length: 200, name: 'password' })
   password: string;
 
-  @Column()
+  @Column({ name: 'email' })
   email: string;
 
-  @Column()
+  @Column({ name: 'created_at' })
   createdAt: Date;
+
+  @Column({ name: 'updated_at' })
+  updatedAt: Date;
 }
