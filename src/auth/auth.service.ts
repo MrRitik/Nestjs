@@ -7,6 +7,7 @@ import {
 import { JwtService } from '@nestjs/jwt';
 import { UsersService } from 'src/users/services/users.service';
 import * as bcrypt from 'bcrypt';
+import { JwtPayload } from './interface/jwt-payload.interface';
 
 @Injectable()
 export class AuthService {
@@ -36,7 +37,7 @@ export class AuthService {
         throw new UnauthorizedException('Invalid credentials');
       }
 
-      const payload = { username: user.username, id: user.id };
+      const payload = { username: user.username, sub: user.id };
       const access_token = this.jwtService.sign(payload);
 
       this.logger.log(`Successfully generated token for user: ${username}`);
@@ -48,10 +49,23 @@ export class AuthService {
       );
 
       if (error instanceof UnauthorizedException) {
-        throw error; // Re-throw auth-specific exceptions
+        throw error;
       }
 
       throw new InternalServerErrorException('Login processing failed');
+    }
+  }
+
+  validateToken(token: string): JwtPayload {
+    try {
+      const payload = this.jwtService.verify<JwtPayload>(token);
+      if (!payload || !payload.sub) {
+        throw new UnauthorizedException('Invalid token');
+      }
+      return payload;
+    } catch {
+      this.logger.warn('Token validation failed');
+      throw new UnauthorizedException('Invalid or expired token');
     }
   }
 }

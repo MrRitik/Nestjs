@@ -5,9 +5,15 @@ import {
   InternalServerErrorException,
   UnauthorizedException,
   Logger,
+  Get,
+  UseGuards,
+  Req,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { AuthDto } from './dto';
+import { AuthGuard } from './gaurds/auth.gaurd';
+import { Request } from 'express';
+import { JwtPayload } from './interface/jwt-payload.interface';
 
 @Controller('auth')
 export class AuthController {
@@ -39,5 +45,12 @@ export class AuthController {
 
       throw new InternalServerErrorException('Login failed');
     }
+  }
+
+  @Get('me')
+  @UseGuards(AuthGuard)
+  getMe(@Req() req: Request & { user: JwtPayload }) {
+    // req.user is set by JwtStrategy
+    return req.user;
   }
 }
