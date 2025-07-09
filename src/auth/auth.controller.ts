@@ -11,7 +11,7 @@ import {
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { AuthDto } from './dto';
-import { AuthGuard } from './gaurds/auth.gaurd';
+import { AuthGuard } from '../common/gaurds/auth.gaurd';
 import { Request } from 'express';
 import { JwtPayload } from './interface/jwt-payload.interface';
 
