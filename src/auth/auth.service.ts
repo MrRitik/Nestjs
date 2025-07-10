@@ -8,6 +8,8 @@ import { JwtService } from '@nestjs/jwt';
 import { UsersService } from 'src/users/services/users.service';
 import * as bcrypt from 'bcrypt';
 import { JwtPayload } from './interface/jwt-payload.interface';
+import { TokenResponseDto } from './dto';
+import { refreshJwtConfig } from './config/refresh-jwt.config';
 
 @Injectable()
 export class AuthService {
@@ -18,10 +20,7 @@ export class AuthService {
     private readonly jwtService: JwtService,
   ) {}
 
-  async login(
-    username: string,
-    password: string,
-  ): Promise<{ access_token: string }> {
+  async login(username: string, password: string): Promise<TokenResponseDto> {
     try {
       this.logger.log(`Attempting login for username: ${username}`);
 
@@ -38,10 +37,17 @@ export class AuthService {
       }
 
       const payload = { username: user.username, sub: user.id };
-      const access_token = this.jwtService.sign(payload);
+      const accessToken = this.jwtService.sign(payload);
+      const refreshToken = this.jwtService.sign(payload, {
+        secret: refreshJwtConfig.secret,
+        expiresIn: refreshJwtConfig.signOptions?.expiresIn ?? 3600,
+      });
 
-      this.logger.log(`Successfully generated token for user: ${username}`);
-      return { access_token };
+      // Store refresh token in DB
+      await this.usersService.updateUserRefreshToken(user.id, refreshToken);
+
+      this.logger.log(`Successfully generated tokens for user: ${username}`);
+      return { accessToken, refreshToken };
     } catch (error: unknown) {
       this.logger.error(
         `Login failed for username: ${username}`,
@@ -66,6 +72,32 @@ export class AuthService {
     } catch {
       this.logger.warn('Token validation failed');
       throw new UnauthorizedException('Invalid or expired token');
+    }
+  }
+
+  async refreshTokens(
+    userId: number,
+    refreshToken: string,
+  ): Promise<TokenResponseDto> {
+    const user = await this.usersService.findUserById(userId);
+    const isValid = await this.usersService.isRefreshTokenValid(
+      userId,
+      refreshToken,
+    );
+    if (!user || !isValid) {
+      throw new UnauthorizedException('Invalid refresh token');
+    }
+    try {
+      const payload = { username: user.username, sub: user.id };
+      const accessToken = this.jwtService.sign(payload);
+      const newRefreshToken = this.jwtService.sign(payload, {
+        secret: refreshJwtConfig.secret,
+        expiresIn: refreshJwtConfig.signOptions?.expiresIn ?? 3600,
+      });
+      await this.usersService.updateUserRefreshToken(user.id, newRefreshToken);
+      return { accessToken, refreshToken: newRefreshToken };
+    } catch {
+      throw new InternalServerErrorException('Could not refresh tokens');
     }
   }
 }

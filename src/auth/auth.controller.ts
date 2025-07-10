@@ -10,19 +10,24 @@ import {
   Req,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
-import { AuthDto } from './dto';
+import { AuthDto, TokenResponseDto, RefreshTokenDto } from './dto';
 import { AuthGuard } from '../common/gaurds/auth.gaurd';
 import { Request } from 'express';
 import { JwtPayload } from './interface/jwt-payload.interface';
+import { JwtService } from '@nestjs/jwt';
+import { RefreshAuthGuard } from 'src/common/gaurds';
 
 @Controller('auth')
 export class AuthController {
   private readonly logger = new Logger(AuthController.name);
 
-  constructor(private readonly authService: AuthService) {}
+  constructor(
+    private readonly authService: AuthService,
+    private readonly jwtService: JwtService,
+  ) {}
 
   @Post('login')
-  async login(@Body() authDto: AuthDto) {
+  async login(@Body() authDto: AuthDto): Promise<TokenResponseDto> {
     try {
       this.logger.log(`Login attempt for username: ${authDto.username}`);
 
@@ -36,7 +41,7 @@ export class AuthController {
     } catch (error: unknown) {
       this.logger.error(
         `Login failed for username: ${authDto.username}`,
-        (error as Error).stack,
+        error instanceof Error ? error.stack : undefined,
       );
 
       if (error instanceof UnauthorizedException) {
@@ -45,6 +50,17 @@ export class AuthController {
 
       throw new InternalServerErrorException('Login failed');
     }
+  }
+
+  @Post('refresh')
+  @UseGuards(RefreshAuthGuard)
+  async refresh(
+    @Req() req: Request & { user: { id: number; username: string } },
+    @Body() refreshDto: RefreshTokenDto,
+  ) {
+    const user = req.user;
+    const refreshToken = refreshDto.refreshToken;
+    return await this.authService.refreshTokens(user.id, refreshToken);
   }
 
   @Get('me')

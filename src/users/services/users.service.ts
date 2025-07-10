@@ -69,13 +69,28 @@ export class UsersService {
     }
   }
 
-  updateUser(id: number, updateUserDto: IUpdateUser) {
+  async updateUser(id: number, updateUserDto: IUpdateUser) {
     this.logger.log(`Updating user with ID: ${id}`);
     return this.userRepository.update({ id }, { ...updateUserDto });
   }
 
-  deleteUser(id: number) {
+  async deleteUser(id: number) {
     this.logger.log(`Deleting user with ID: ${id}`);
     return this.userRepository.delete({ id });
+  }
+
+  async updateUserRefreshToken(id: number, refreshToken: string) {
+    this.logger.log(`Updating refresh token for user ID: ${id}`);
+    const hashedToken = await bcrypt.hash(refreshToken, this.SALT_ROUNDS);
+    await this.userRepository.update({ id }, { refreshToken: hashedToken });
+  }
+
+  async isRefreshTokenValid(
+    id: number,
+    refreshToken: string,
+  ): Promise<boolean> {
+    const user = await this.findUserById(id);
+    if (!user || !user.refreshToken) return false;
+    return bcrypt.compare(refreshToken, user.refreshToken);
   }
 }

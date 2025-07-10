@@ -18,6 +18,14 @@ export class UserEntity {
   @Expose()
   email: string;
 
+  @Column({
+    name: 'refresh_token',
+    type: 'varchar',
+    length: 500,
+    nullable: true,
+  })
+  refreshToken?: string;
+
   @Column({ name: 'created_at' })
   createdAt: Date;
 
