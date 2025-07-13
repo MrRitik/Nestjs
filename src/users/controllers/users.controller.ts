@@ -6,10 +6,13 @@ import {
   Param,
   Patch,
   Post,
+  UseGuards,
 } from '@nestjs/common';
 import { UsersService } from '../services';
 import { CreateUserDto, UpdateUserDto } from '../dto';
+import { ApiKeyGuard } from '../../api-key/api-key.guard';
 
+@UseGuards(ApiKeyGuard)
 @Controller('users')
 export class UsersController {
   constructor(private usersService: UsersService) {}

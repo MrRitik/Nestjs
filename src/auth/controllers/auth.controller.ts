@@ -9,7 +9,7 @@ import {
 } from '@nestjs/common';
 import { AuthService } from '../services/auth.service';
 import { AuthDto, TokenResponseDto, RefreshTokenDto } from '../dto';
-import { AuthGuard } from '../guards/auth.gaurd';
+import { AuthGuard } from '../guards/auth.guard';
 import { Request } from 'express';
 import { IJwtPayload } from '../interface/jwt-payload.interface';
 import { JwtService } from '@nestjs/jwt';
