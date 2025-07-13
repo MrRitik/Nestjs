@@ -3,9 +3,9 @@ import { Column, Entity, PrimaryGeneratedColumn } from 'typeorm';
 
 @Entity('users')
 export class UserEntity {
-  @PrimaryGeneratedColumn({ name: 'id' })
+  @PrimaryGeneratedColumn('uuid', { name: 'id' })
   @Expose()
-  id: number;
+  id: string;
 
   @Column({ unique: true, name: 'user_name' })
   @Expose()
@@ -24,7 +24,14 @@ export class UserEntity {
     length: 500,
     nullable: true,
   })
-  refreshToken: string;
+  refreshToken: string | null;
+
+  @Column({
+    name: 'expiry_in',
+    type: 'timestamp',
+    nullable: true,
+  })
+  expiryIn: Date | null;
 
   @Column({ name: 'created_at' })
   createdAt: Date;

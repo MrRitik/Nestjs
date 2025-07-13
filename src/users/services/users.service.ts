@@ -35,7 +35,7 @@ export class UsersService {
     }
   }
 
-  async getUserById(id: number) {
+  async getUserById(id: string) {
     try {
       this.logger.log(`Fetching user with ID: ${id}`);
       const user = await this.userRepository.findOne({ where: { id } });
@@ -96,7 +96,7 @@ export class UsersService {
   }
 
   // Internal method for auth service (returns full user)
-  findUserById(id: number) {
+  findUserById(id: string) {
     this.logger.log(`Retrieving user with ID: ${id}`);
     return this.userRepository.findOne({ where: { id } });
   }
@@ -148,7 +148,7 @@ export class UsersService {
   }
 
   async updateUser(
-    id: number,
+    id: string,
     updateUserDto: IUpdateUser,
   ): Promise<{ message: string }> {
     try {
@@ -180,7 +180,7 @@ export class UsersService {
     }
   }
 
-  async deleteUser(id: number): Promise<{ message: string }> {
+  async deleteUser(id: string): Promise<{ message: string }> {
     try {
       this.logger.log(`Deleting user with ID: ${id}`);
       const result = await this.userRepository.delete({ id });
@@ -207,18 +207,115 @@ export class UsersService {
     }
   }
 
-  async updateUserRefreshToken(id: number, refreshToken: string) {
+  async updateUserRefreshToken(
+    id: string,
+    refreshToken: string,
+    expiryTime?: Date,
+  ) {
     this.logger.log(`Updating refresh token for user ID: ${id}`);
     const hashedToken = await bcrypt.hash(refreshToken, this.SALT_ROUNDS);
-    await this.userRepository.update({ id }, { refreshToken: hashedToken });
+
+    // Calculate expiry time if not provided (default to 7 days from now)
+    const expiry = expiryTime || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+
+    await this.userRepository.update(
+      { id },
+      {
+        refreshToken: hashedToken,
+        expiryIn: expiry,
+      },
+    );
   }
 
   async isRefreshTokenValid(
-    id: number,
+    id: string,
     refreshToken: string,
   ): Promise<boolean> {
     const user = await this.findUserById(id);
     if (!user || !user.refreshToken) return false;
+
+    // Check if token is expired
+    if (user.expiryIn && new Date() > user.expiryIn) {
+      this.logger.warn(`Refresh token expired for user ID: ${id}`);
+      return false;
+    }
+
+    // Check if token matches
     return bcrypt.compare(refreshToken, user.refreshToken);
+  }
+
+  async clearExpiredRefreshTokens(): Promise<number> {
+    try {
+      this.logger.log('Clearing expired refresh tokens');
+      const result = await this.userRepository
+        .createQueryBuilder()
+        .update(UserEntity)
+        .set({
+          refreshToken: null,
+          expiryIn: null,
+        })
+        .where('expiry_in IS NOT NULL AND expiry_in < :now', {
+          now: new Date(),
+        })
+        .execute();
+
+      const clearedCount = result.affected || 0;
+      this.logger.log(`Cleared ${clearedCount} expired refresh tokens`);
+      return clearedCount;
+    } catch (error: unknown) {
+      this.logger.error(
+        'Failed to clear expired refresh tokens',
+        (error as Error)?.stack,
+      );
+      throw new InternalServerErrorException(
+        'Failed to clear expired refresh tokens',
+      );
+    }
+  }
+
+  async clearUserRefreshToken(id: string): Promise<void> {
+    try {
+      this.logger.log(`Clearing refresh token for user ID: ${id}`);
+
+      // Set both refresh token and expiry to null
+      await this.userRepository.update(
+        { id },
+        {
+          refreshToken: null,
+          expiryIn: null,
+        },
+      );
+
+      this.logger.log(
+        `Successfully cleared refresh token and expiry for user ID: ${id}`,
+      );
+    } catch (error: unknown) {
+      this.logger.error(
+        `Failed to clear refresh token for user ID: ${id}`,
+        (error as Error)?.stack,
+      );
+      throw new InternalServerErrorException('Failed to clear refresh token');
+    }
+  }
+
+  async getExpiredRefreshTokensCount(): Promise<number> {
+    try {
+      const count = await this.userRepository
+        .createQueryBuilder('user')
+        .where('user.expiry_in IS NOT NULL AND user.expiry_in < :now', {
+          now: new Date(),
+        })
+        .getCount();
+
+      return count;
+    } catch (error: unknown) {
+      this.logger.error(
+        'Failed to get expired refresh tokens count',
+        (error as Error)?.stack,
+      );
+      throw new InternalServerErrorException(
+        'Failed to get expired refresh tokens count',
+      );
+    }
   }
 }

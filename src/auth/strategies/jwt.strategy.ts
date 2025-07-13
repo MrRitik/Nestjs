@@ -1,16 +1,12 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
-import { AuthService } from '../services/auth.service';
 import { UsersService } from 'src/users/services/users.service';
-import { JwtPayload } from '../interface/jwt-payload.interface';
+import { IJwtPayload } from '../interface/jwt-payload.interface';
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
-  constructor(
-    private readonly authService: AuthService,
-    private readonly usersService: UsersService,
-  ) {
+  constructor(private readonly usersService: UsersService) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       ignoreExpiration: false,
@@ -18,7 +14,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     });
   }
 
-  async validate(payload: JwtPayload) {
+  async validate(payload: IJwtPayload) {
     if (!payload || !payload.sub) {
       throw new UnauthorizedException('Invalid token payload');
     }
@@ -28,7 +24,11 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     }
 
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { password, ...userWithoutPassword } = user;
-    return userWithoutPassword;
+    const { password, id, ...userWithoutPassword } = user;
+    return {
+      ...userWithoutPassword,
+      sub: payload.sub,
+      username: payload.username,
+    };
   }
 }

@@ -1,2 +1,2 @@
-export { AuthGuard } from './auth.guard';
+export { AuthGuard } from './auth.gaurd';
 export { RefreshAuthGuard } from './refresh-auth.guard';

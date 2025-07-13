@@ -2,7 +2,7 @@ import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy, StrategyOptionsWithRequest } from 'passport-jwt';
 import { Request } from 'express';
-import { refreshJwtConfig } from 'src/auth/config/refresh-jwt.config';
+import { refreshJwtConfig } from '../config/refresh-jwt.config';
 import { UsersService } from 'src/users/services/users.service';
 
 @Injectable()
@@ -19,7 +19,7 @@ export class RefreshJwtStrategy extends PassportStrategy(
     } as StrategyOptionsWithRequest);
   }
 
-  async validate(req: Request, payload: { sub: number; username: string }) {
+  async validate(req: Request, payload: { sub: string; username: string }) {
     const body = req.body as Record<string, any>;
     let refreshToken: string | undefined = undefined;
     if (body && typeof body.refreshToken === 'string') {
