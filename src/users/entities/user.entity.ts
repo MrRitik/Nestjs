@@ -24,7 +24,7 @@ export class UserEntity {
     length: 500,
     nullable: true,
   })
-  refreshToken?: string;
+  refreshToken: string;
 
   @Column({ name: 'created_at' })
   createdAt: Date;
