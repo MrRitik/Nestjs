@@ -14,6 +14,7 @@ import { Request } from 'express';
 import { IJwtPayload } from '../interface/jwt-payload.interface';
 import { JwtService } from '@nestjs/jwt';
 import { RefreshAuthGuard } from '../guards';
+import { ApiKeyGuard } from 'src/api-key/api-key.guard';
 
 @Controller('auth')
 export class AuthController {
@@ -25,6 +26,7 @@ export class AuthController {
   ) {}
 
   @Post('login')
+  @UseGuards(ApiKeyGuard)
   async login(@Body() authDto: AuthDto): Promise<TokenResponseDto> {
     return this.authService.login(authDto.username, authDto.password);
   }
