@@ -6,15 +6,21 @@ import {
 } from '@nestjs/common';
 import { Request } from 'express';
 
+interface RequestWithSkipApiKeyCheck extends Request {
+  skipApiKeyCheck?: boolean;
+}
+
 @Injectable()
 export class ApiKeyGuard implements CanActivate {
   canActivate(context: ExecutionContext): boolean {
-    const request = context.switchToHttp().getRequest<Request>();
-    const apiKey = request.headers['api-key'] as string | undefined;
+    const request = context
+      .switchToHttp()
+      .getRequest<RequestWithSkipApiKeyCheck>();
 
-    if (request.path === '/auth/logout') {
+    if (request.skipApiKeyCheck) {
       return true;
     }
+    const apiKey = request.headers['api-key'] as string | undefined;
 
     if (!apiKey) {
       throw new UnauthorizedException('API key is missing.');
